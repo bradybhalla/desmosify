@@ -1,4 +1,5 @@
-images/
+images/*
 !images/example.png
 zz_old*
 out.txt
+.DS_Store
