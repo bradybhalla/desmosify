@@ -8,14 +8,15 @@ This project turns an image into a graph in [Desmos](https://desmos.com/calculat
 
 ### Example
 
-![Before](images/example.png) ![After](images/result.png)
+<img src="images/example.png" alt="Before" width="200"/>
+<img src="images/result.png" alt="After" width="200"/>
 
 ### Usage
 	python3 to_desmos.py <image path> [<clusters> <color weight> <blur level>]
  - `<image path>`: path to the image to convert
  - `<clusters>` *(optional, default=120)*: the number of clusters to use for k-means clustering
- - `<color weight>` *(optional, default=1.0)*: how much to consider colors (as opposed to location) of pixels during clustering
- - `<blur level>` *(optional, default=3)*: how much to blur the original image
+ - `<color weight>` *(optional, default=2.0)*: how much to consider colors (as opposed to location) of pixels during clustering
+ - `<blur level>` *(optional, default=5)*: how much to blur the original image
 
 The output of this program will be stored in *out.txt*.  Copy and paste this file into the JavaScript console on [Desmos](https://desmos.com/calculator) and drag the *a* slider to its maximum value.
 
