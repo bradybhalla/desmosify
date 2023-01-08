@@ -33,17 +33,17 @@ if __name__ == "__main__":
 		if len(sys.argv) >= 3:
 			clusters = int(sys.argv[2])
 		else:
-			clusters = 70
+			clusters = 120
 
 		if len(sys.argv) >= 4:
 			color_weight = float(sys.argv[3])
 		else:
-			color_weight = 1
+			color_weight = 2.0
 		
 		if len(sys.argv) >= 5:
 			blur_level = int(sys.argv[4])
 		else:
-			blur_level = 2
+			blur_level = 5
 		
 	except:
 		print("Invalid arguments")
