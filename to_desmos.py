@@ -16,11 +16,11 @@ from fourier_series import Fourier_Series
 def get_js(desmos_code, color):
 	replaced = desmos_code.replace("\\","\\\\")
 	color_hex = f"#{int(color[0]):02x}{int(color[1]):02x}{int(color[2]):02x}"
-	return f"{{latex:\"{replaced}\", color:\"{color_hex}\", parametricDomain:{{min:\"0\", max:\"a\"}}, fill:true, lines:true, fillOpacity:1}}"
+	return f"{{latex:\"{replaced}\", color:\"{color_hex}\", parametricDomain:{{min:\"0\", max:\"a\"}}, fill:true, lines:true, lineWidth:2.5, fillOpacity:1}}"
 
 if __name__ == "__main__":
 	# minimum points in outline for Fourier Series conversion
-	MIN_POINTS = 30
+	MIN_POINTS = 50
 
 	js_codes = ["{latex:\"a=0\",sliderBounds:{min:\"0\", max:\"2\\\\pi\"}}", "{latex:\"N=[0...25]\"}"]
 
@@ -69,14 +69,35 @@ if __name__ == "__main__":
 		#	continue
 
 		# get all outlines in the section and order them into paths
-		if len(outlines[i]) < MIN_POINTS:
+		#if len(outlines[i]) < MIN_POINTS:
+		#	continue
+		if len(outlines[i]) == 0:
 			continue
 		all_ordered_outlines = order_outlines(outlines[i])
 
 		for ordered_outline in all_ordered_outlines:
+
 			# if there aren't enough points, skip
-			if len(ordered_outline) < MIN_POINTS:
+			#if len(ordered_outline) < MIN_POINTS:
+			#	continue
+
+			# if there aren't enough points, make more so the Fourier Series works
+			if len(ordered_outline) == 0:
 				continue
+			while len(ordered_outline) < MIN_POINTS:
+				new_outline = []
+				for j in range(len(ordered_outline)-1):
+					new_outline.append(ordered_outline[j])
+					new_outline.append((
+							ordered_outline[j][0]/2 + ordered_outline[j+1][0]/2,
+							ordered_outline[j][1]/2 + ordered_outline[j+1][1]/2,
+						))
+				new_outline.append(ordered_outline[-1])
+				new_outline.append((
+						ordered_outline[-1][0]/2 + ordered_outline[0][0]/2,
+						ordered_outline[-1][1]/2 + ordered_outline[0][1]/2,
+					))
+				ordered_outline = new_outline
 
 			# calculate and plot fourier series
 			points = np.array(ordered_outline)
@@ -84,10 +105,10 @@ if __name__ == "__main__":
 
 			FS = Fourier_Series(X,Y)
 
-			FS.plot(25,color=color/255)
+			FS.plot(35,color=color/255)
 
 			# convert fourier series into JS for desmos
-			desmos_code = FS.desmosify(25)
+			desmos_code = FS.desmosify(35)
 
 			# area calculated from first term of FS and Green's theorem!!
 			approx_area = abs(np.math.pi*(FS.x_coeffs[1]["cos"]*FS.y_coeffs[1]["sin"] - FS.x_coeffs[1]["sin"]*FS.y_coeffs[1]["cos"]))

@@ -6,7 +6,8 @@ from random import randint
 # minimum nodes to keep a subgraph
 #   30 is a good number because a path will need to have length 30 to
 #   be turned into a Fourier Series
-MIN_NODES = 30
+#   ^^^ this is outdated, now it just makes more points if there aren't enough
+MIN_NODES = 10
 
 # check if two points in an outline are adjacent in the graph representation
 # determined by distance between points
