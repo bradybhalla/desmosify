@@ -12,7 +12,7 @@ This project turns an image into a graph in [Desmos](https://desmos.com/calculat
 <img src="images/result.png" alt="After" width="200"/>
 
 ### Usage
-	python3 to_desmos.py <image path> [<clusters> <color weight> <blur level>]
+    python3 to_desmos.py <image path> [<clusters> <color weight> <blur level>]
  - `<image path>`: path to the image to convert
  - `<clusters>` *(optional, default=120)*: the number of clusters to use for k-means clustering
  - `<color weight>` *(optional, default=2.0)*: how much to consider colors (as opposed to location) of pixels during clustering
