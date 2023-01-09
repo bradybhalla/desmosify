@@ -105,10 +105,10 @@ if __name__ == "__main__":
 
 			FS = Fourier_Series(X,Y)
 
-			FS.plot(35,color=color/255)
+			FS.plot(25,color=color/255)
 
 			# convert fourier series into JS for desmos
-			desmos_code = FS.desmosify(35)
+			desmos_code = FS.desmosify(25)
 
 			# area calculated from first term of FS and Green's theorem!!
 			approx_area = abs(np.math.pi*(FS.x_coeffs[1]["cos"]*FS.y_coeffs[1]["sin"] - FS.x_coeffs[1]["sin"]*FS.y_coeffs[1]["cos"]))
