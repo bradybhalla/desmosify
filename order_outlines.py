@@ -9,12 +9,15 @@ from random import randint
 #   ^^^ this is outdated, now it just makes more points if there aren't enough
 MIN_NODES = 10
 
+
 # check if two points in an outline are adjacent in the graph representation
 # determined by distance between points
-def is_adj(p1,p2):
+def is_adj(p1, p2):
     return (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 < 3
 
 # order the points of an outline into a list of cycles
+
+
 def order_outlines(outline_set):
     # turn into a graph
     points = list(outline_set)
@@ -22,12 +25,13 @@ def order_outlines(outline_set):
     n = len(points)
 
     edges = [
-        [j for j in range(n) if j!=i and is_adj(points[i],points[j])]
+        [j for j in range(n) if j != i and is_adj(points[i], points[j])]
         for i in range(n)
     ]
 
     # break into subgraphs
-    disjoint_subgraphs = [i for i in get_disjoint_subgraphs(set(range(n)), edges)]
+    disjoint_subgraphs = [
+        i for i in get_disjoint_subgraphs(set(range(n)), edges)]
 
     # remove lines and articulation points
     clean_subgraphs = []
@@ -45,6 +49,8 @@ def order_outlines(outline_set):
 
 # find disjoint subgraphs in nodes
 # returns subgraphs found (a partition of nodes)
+
+
 def get_disjoint_subgraphs(nodes, edges):
     n = len(edges)
 
@@ -78,18 +84,21 @@ def get_disjoint_subgraphs(nodes, edges):
 
         counter += 1
 
-    return [[j for j in range(n) if subsets[j]==i+1] for i in range(max(subsets))]
+    return [[j for j in range(n) if subsets[j] == i+1] for i in range(max(subsets))]
 
 # clean up subgraph
 # remove nodes of degree 1
 # resolve articulation points
 # returns nodes of clean subgraphs
 # assume input nodes are all connected
+
+
 def clean_up_subgraph(nodes, edges):
     while True:
         singles = False
 
-        edge_counts = {i: sum([1 for j in edges[i] if j in nodes]) for i in nodes}
+        edge_counts = {i: sum([1 for j in edges[i] if j in nodes])
+                       for i in nodes}
         for i in edge_counts:
             if edge_counts[i] < 2:
                 nodes.remove(i)
@@ -100,7 +109,6 @@ def clean_up_subgraph(nodes, edges):
 
     if len(nodes) < MIN_NODES:
         return []
-
 
     articulation, split_subgraphs = find_split_articulation(nodes, edges)
     if articulation is None:
@@ -114,6 +122,8 @@ def clean_up_subgraph(nodes, edges):
 
 # find articulation points in nodes and return subgraphs formed by
 # splitting the articulation point
+
+
 def find_split_articulation(nodes, edges):
     orig = get_disjoint_subgraphs(nodes, edges)
     if len(orig) > 1:
@@ -134,13 +144,15 @@ def find_split_articulation(nodes, edges):
             break
 
     if articulation is None:
-        return (None,[list(nodes_set)])
+        return (None, [list(nodes_set)])
 
     for i in subgraphs:
         i.append(articulation)
     return (articulation, subgraphs)
 
 # depth first search with picking random edges
+
+
 def random_dfs(start, target, nodes, edges, edges_deleted):
     visited = set()
     visited.add(start)
@@ -158,7 +170,7 @@ def random_dfs(start, target, nodes, edges, edges_deleted):
                 continue
             if adj in visited:
                 continue
-            if (curr,adj) in edges_deleted or (adj,curr) in edges_deleted:
+            if (curr, adj) in edges_deleted or (adj, curr) in edges_deleted:
                 continue
 
             unvisited_adj.append(adj)
@@ -172,16 +184,18 @@ def random_dfs(start, target, nodes, edges, edges_deleted):
             stack.append(next_node)
 
     raise ValueError("target not found")
-    
+
 # order nodes into a long cycle
 # runs a randomized DFS lots of times and uses the longest cycle found
 # run until <percent_in_cycle> of nodes are in cycle or <max_trials> times
-def get_ordering(nodes, edges, max_trials=2000, percent_in_cycle = 0.9):
+
+
+def get_ordering(nodes, edges, max_trials=2000, percent_in_cycle=0.9):
     possible_starts = []
     for i in nodes:
         adj = [j for j in edges[i] if j in nodes]
         if len(adj) == 2:
-            possible_starts.append((i, adj[randint(0,1)]))
+            possible_starts.append((i, adj[randint(0, 1)]))
 
     if len(possible_starts) == 0:
         print("No starting point for cycle found")
@@ -194,4 +208,4 @@ def get_ordering(nodes, edges, max_trials=2000, percent_in_cycle = 0.9):
         if len(p) > percent_in_cycle*len(nodes):
             return p
         paths.append(p)
-    return max(paths, key=lambda x:len(x))
+    return max(paths, key=lambda x: len(x))
