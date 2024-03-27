@@ -92,7 +92,7 @@ def binary_to_equation(im):
 
 
 if __name__ == "__main__":
-    to_rgb = lambda x: np.array([int(i + j, 16) for i, j in zip(x[1::2], x[2::2])]) / 255
+    to_rgb = lambda x: np.array([int(i + j, 16) for i, j in zip(x[1::2], x[2::2])])
     graph_colors = {
             "r" : to_rgb("#c74440"),
             "b" : to_rgb("#2d70b3"),
@@ -103,18 +103,15 @@ if __name__ == "__main__":
             "W" : to_rgb("#ffffff"),
             "c" : to_rgb("#00ffff"),
             }
-    graphs = "bgpkk"
+    graphs = "kkbckW"
 
-    possible_colors = []
-    for i in range(2**len(graphs)):
-        format_str = f"{{:0{len(graphs)}b}}"
-        used = [j=="1" for j in format_str.format(i)]
-        color = np.ones(3)
-        for k,j in enumerate(used):
-            if j:
-                color = 0.6*color + 0.4*graph_colors[graphs[k]]
-        possible_colors.append(color)
-    possible_colors = np.array(possible_colors)
+    possible_colors = np.zeros((2**len(graphs), 3)) + 255
+    color_inds = np.arange(2**len(graphs))
+    for i,j in enumerate(graphs):
+        colors_using_graph = np.where(np.bitwise_and(color_inds, 2**i) != 0)
+        possible_colors[colors_using_graph] *= 0.6
+        possible_colors[colors_using_graph] += 0.4 * graph_colors[j]
+    possible_colors = possible_colors.astype(int)
 
 
     # load image
@@ -122,59 +119,35 @@ if __name__ == "__main__":
     im = cv.cvtColor(im, cv.COLOR_BGR2RGB)
     height, width, _ = im.shape
 
-    new_width = 300
+    new_width = 600
     im = cv.resize(im, (new_width, new_width * height // width))
+    # show(im, "original")
 
-    clusters, colors = cluster_image(im, 200, position_weight=0)
 
-    im = colors[clusters]
-    # show(im)
+    best_colors = np.expand_dims(im, axis=2)
+    best_colors = np.repeat(best_colors, possible_colors.shape[0], axis=2)
+    best_colors = best_colors - possible_colors
+    best_colors = np.linalg.norm(best_colors, axis=3)
+    best_colors = np.argmin(best_colors, axis=2)
 
-    YUV_of_RGB = np.array([[0.299, 0.587, 0.114], [-0.14713, -0.28886, 0.436], [0.615, -0.51499, -0.10001]])
-    color_dists = lambda c: np.linalg.norm((possible_colors - c) @ YUV_of_RGB.T, axis=1)
-
-    # new_color_indices contains the index into possible_colors of each of the clusters
-    new_color_indices = np.array([np.argmin(color_dists(i)) for i in colors])
-    im = possible_colors[new_color_indices][clusters]
-    show(im, "target")
-
-    # ind_to_colors maps possible_colors elements to the colors which make them up
-    ind_to_colors = {}
-    for i in set(new_color_indices):
-        format_str = f"{{:0{len(graphs)}b}}"
-        used = [j=="1" for j in format_str.format(i)]
-        ind_to_colors[i] = [j for j,k in zip(graphs, used) if k]
-
-    # graph contents contains the color of each graph and
-    # which clusters it needs to show
-    graph_contents = []
-    for c in graphs:
-        contents = []
-        for i,j in ind_to_colors.items():
-            if len(j) == 0:
-                continue
-            if j[0] == c:
-                contents += list(np.where(new_color_indices == i)[0])
-                del j[0]
-        graph_contents.append((c, contents))
+    im = possible_colors[best_colors]
+    # show(im, "desmos color target")
 
     print("Colors calculated", file=sys.stderr)
 
     plots = []
     total_im = np.ones(im.shape)
-    for i, (c,clusters_needed) in enumerate(graph_contents):
+    for i, c in enumerate(graphs):
         im = np.zeros(total_im.shape[:2])
-        for cl in clusters_needed:
-            im += clusters == cl
+        im = np.bitwise_and(best_colors, 2**i) // 2**i
         im = im.astype(np.uint8)
         # show(im, title=c)
 
-        print(f"Computing equation {i+1}/{len(graph_contents)}", file=sys.stderr)
+        print(f"Computing equation {i+1}/{len(graphs)}", file=sys.stderr)
         im, eq = binary_to_equation(im)
         plots.append(eq)
 
-        total_im[np.where(im)] = 0.6*total_im[np.where(im)] + 0.4*graph_colors[c]
+        total_im[np.where(im)] = 0.6*total_im[np.where(im)] + 0.4*graph_colors[c]/255
 
     print("\n".join(plots), end="")
-    show(total_im, "reconstructed")
-
+    # show(total_im, "reconstructed")
