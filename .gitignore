@@ -4,3 +4,4 @@ images/*
 zz_old*
 out.txt
 .DS_Store
+__pycache__/

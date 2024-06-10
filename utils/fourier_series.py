@@ -64,13 +64,15 @@ def points_to_fs(X, Y):
         - the coefficients of the two Fourier series
     """
     f = get_interpolator(X, Y)
-    fx = f(np.linspace(0, 1, 2048))
+
+    eps = 0.001
+    fx = f(np.linspace(eps, 1-eps, 2048))
     ax, bx = fourier_series_1d(fx[:, 0])
     ay, by = fourier_series_1d(fx[:, 1])
     return ax, bx, ay, by
 
 
-def series_to_desmos(ax, bx, ay, by, max_terms=30):
+def fs_to_desmos(ax, bx, ay, by, max_terms=30):
     """
     Create a Desmos equation which traces a Fourier series approximation
     of the given points. In order for this to work, also define
@@ -92,7 +94,7 @@ def series_to_desmos(ax, bx, ay, by, max_terms=30):
     return rf"\left(\operatorname{{total}}\left(\left[{', '.join(As_x)}\right]\cos\left(2\pi Nt\right)\right)+\operatorname{{total}}\left(\left[{', '.join(Bs_x)}\right]\sin\left(2\pi Nt\right)\right),\operatorname{{total}}\left(\left[{', '.join(As_y)}\right]\cos\left(2\pi Nt\right)\right)+\operatorname{{total}}\left(\left[{', '.join(Bs_y)}\right]\sin\left(2\pi Nt\right)\right)\right)"
 
 
-def series_to_func(ax, bx, ay, by, terms=30):
+def fs_to_func(ax, bx, ay, by, terms=30):
     """
     Create a function which traces a Fourier series approximation
     of the given points.
@@ -137,10 +139,10 @@ if __name__ == "__main__":
     plt.plot(X, Y, "o")
 
     # print desmos
-    print(series_to_desmos(ax, bx, ay, by), end="")
+    print(fs_to_desmos(ax, bx, ay, by), end="")
 
     # get Fourier series function
-    fs = series_to_func(ax, bx, ay, by)
+    fs = fs_to_func(ax, bx, ay, by)
     t = np.linspace(0,1,300)
 
     plt.plot(*fs(t).T)

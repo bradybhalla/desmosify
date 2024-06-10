@@ -7,15 +7,17 @@ import matplotlib.pyplot as plt
 import cv2 as cv
 from sklearn.cluster import KMeans
 
+from utils.fourier_series import points_to_fs, fs_to_desmos
+
 
 def show(image, title=""):
     plt.imshow(image, cmap="gray")
     plt.title(title)
     plt.show()
 
-def cluster_image(im, n_clusters, position_weight=0):
+def cluster_image(im, n_clusters, position_weight=0.0):
     index_arr = np.indices((im.shape[0],im.shape[1])).reshape((2,im.shape[0]*im.shape[1])).T 
-    color_arr = im[*index_arr.T]
+    color_arr = im[(*index_arr.T,)]
     normalized_indices = index_arr / np.array([im.shape[0], im.shape[1]])
     normalized_colors = color_arr / 255 # pyright: ignore
 
@@ -26,7 +28,7 @@ def cluster_image(im, n_clusters, position_weight=0):
     preds = model.predict(X)
 
     clustered_img = np.zeros((im.shape[0], im.shape[1]), dtype=int)
-    clustered_img[*index_arr.T] = preds
+    clustered_img[(*index_arr.T,)] = preds
 
     return clustered_img, colors
 
@@ -35,6 +37,8 @@ def get_toplevel_polygon_equation(contours):
     for i in contours:
         points = i[:,0,:]
         if len(points) >= 3:
+            # coeffs = points_to_fs(points[:,0], points[:,1])
+            # all_polygons.append(fs_to_desmos(*coeffs))
             polygon = r"\operatorname{polygon}\left("
             polygon += ",".join([rf"\left({j[0]}, {im.shape[0]-j[1]}\right)" for j in points])
             polygon += r"\right)"
@@ -60,7 +64,7 @@ def remove_hole(im, contours, hierarchy, contour_index):
                 hole_point = hp
                 min_dist = dist
 
-    im = cv.line(im, outline_point, hole_point, 0, 1)
+    im = cv.line(im, outline_point, hole_point, 0, 1) #pyright: ignore
 
     return im
 
@@ -94,23 +98,26 @@ def binary_to_equation(im):
 if __name__ == "__main__":
     to_rgb = lambda x: np.array([int(i + j, 16) for i, j in zip(x[1::2], x[2::2])])
     graph_colors = {
-            "r" : to_rgb("#c74440"),
-            "b" : to_rgb("#2d70b3"),
-            "g" : to_rgb("#388c46"),
-            "p" : to_rgb("#6042a6"),
-            "o" : to_rgb("#fa7e19"),
-            "k" : to_rgb("#000000"),
-            "W" : to_rgb("#ffffff"),
-            "c" : to_rgb("#00ffff"),
+            "r" : (to_rgb("#c74440"), 0.4),
+            "b" : (to_rgb("#2d70b3"), 0.4),
+            "g" : (to_rgb("#388c46"), 0.4),
+            "p" : (to_rgb("#6042a6"), 0.4),
+            "o" : (to_rgb("#fa7e19"), 0.4),
+            "k" : (to_rgb("#000000"), 0.4),
+            "K" : (to_rgb("#000000"), 1),
+            "B" : (to_rgb("#2d70b3"), 1),
+            "W" : (to_rgb("#ffffff"), 0.4),
+            "c" : (to_rgb("#00ffff"), 0.4),
             }
-    graphs = "kkbckW"
+    graphs = "Krb"
 
     possible_colors = np.zeros((2**len(graphs), 3)) + 255
     color_inds = np.arange(2**len(graphs))
     for i,j in enumerate(graphs):
         colors_using_graph = np.where(np.bitwise_and(color_inds, 2**i) != 0)
-        possible_colors[colors_using_graph] *= 0.6
-        possible_colors[colors_using_graph] += 0.4 * graph_colors[j]
+        c, a = graph_colors[j]
+        possible_colors[colors_using_graph] *= 1 - a
+        possible_colors[colors_using_graph] += a * c
     possible_colors = possible_colors.astype(int)
 
 
@@ -119,7 +126,7 @@ if __name__ == "__main__":
     im = cv.cvtColor(im, cv.COLOR_BGR2RGB)
     height, width, _ = im.shape
 
-    new_width = 600
+    new_width = 800
     im = cv.resize(im, (new_width, new_width * height // width))
     # show(im, "original")
 
@@ -131,13 +138,13 @@ if __name__ == "__main__":
     best_colors = np.argmin(best_colors, axis=2)
 
     im = possible_colors[best_colors]
-    # show(im, "desmos color target")
+    show(im, "desmos color target")
 
     print("Colors calculated", file=sys.stderr)
 
     plots = []
     total_im = np.ones(im.shape)
-    for i, c in enumerate(graphs):
+    for i, j in enumerate(graphs):
         im = np.zeros(total_im.shape[:2])
         im = np.bitwise_and(best_colors, 2**i) // 2**i
         im = im.astype(np.uint8)
@@ -147,7 +154,9 @@ if __name__ == "__main__":
         im, eq = binary_to_equation(im)
         plots.append(eq)
 
-        total_im[np.where(im)] = 0.6*total_im[np.where(im)] + 0.4*graph_colors[c]/255
+        c, a = graph_colors[j]
+
+        total_im[np.where(im)] = (1-a)*total_im[np.where(im)] + a*c/255
 
     print("\n".join(plots), end="")
-    # show(total_im, "reconstructed")
+    show(total_im, "reconstructed")

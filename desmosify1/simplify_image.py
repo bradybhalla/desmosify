@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2 as cv
 import scipy
-from fourier_series import Fourier_Series
 
 
 def simplify_image(image_file, COLOR_WEIGHT=0.5, CLUSTERS=100, BLUR_LEVEL=5, show_steps=True):

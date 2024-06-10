@@ -5,12 +5,15 @@
 # <blur level>: int, how much blur should be applied to the image
 
 import sys
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
 from order_outlines import order_outlines
 from simplify_image import simplify_image
-from fourier_series import Fourier_Series
+
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+from utils.fourier_series import points_to_fs, fs_to_desmos
 
 
 def get_js(desmos_code, color):
@@ -103,15 +106,12 @@ if __name__ == "__main__":
             points = np.array(ordered_outline)
             X, Y = points.T[1], -points.T[0]
 
-            FS = Fourier_Series(X,Y)
-
-            FS.plot(25,color=color/255)
-
             # convert fourier series into JS for desmos
-            desmos_code = FS.desmosify(25)
+            ax, bx, ay, by = points_to_fs(X, Y)
+            desmos_code =  fs_to_desmos(ax, bx, ay, by, max_terms=25)
 
             # area calculated from first term of FS and Green's theorem!!
-            approx_area = abs(np.math.pi*(FS.x_coeffs[1]["cos"]*FS.y_coeffs[1]["sin"] - FS.x_coeffs[1]["sin"]*FS.y_coeffs[1]["cos"]))
+            approx_area = abs(np.pi*(ax[1]*by[1] - bx[1]*ay[1]))
             unordered_js_shape_codes.append((-approx_area, get_js(desmos_code, color)))
 
     # sort shapes in order of descending size and add to js_codes list
