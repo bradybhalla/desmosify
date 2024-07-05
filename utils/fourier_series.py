@@ -16,6 +16,9 @@ def get_interpolator(X, Y):
     Returns:
         - f: [0,1] -> R^2
     """
+    assert X.shape[0] == Y.shape[0]
+    assert X.shape[0] >= 2
+
     # filter out consecutive equal values
     inds = np.where(np.logical_or(X[1:] != X[:-1], Y[1:] != Y[:-1]))
     X = np.concatenate([X[inds], [X[-1]]])
