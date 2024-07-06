@@ -125,27 +125,3 @@ def split_region(mask, *, area_threshold):
 
     return large_region_mask, small_region_mask
 
-
-def terms_needed_for_err(fs, X, Y, *, mean_err_threshold, max_terms):
-    """
-    Find the number of terms needed in a fourier series for the average error
-    to be `mean_err_threshold`. If this is larger than `max_terms`, it will
-    return `max_terms` instead.
-    """
-    f = get_interpolator(X, Y)
-    eps = 1e-6
-    fx = f(np.linspace(eps, 1 - eps, 500))
-
-    terms = 1
-    while terms < max_terms:
-        eq = fs_to_func(*fs, terms=terms)
-        eqx = eq(np.linspace(eps, 1 - eps, 500))
-
-        err = np.linalg.norm(fx - eqx, axis=1)
-
-        if err.mean() < mean_err_threshold:
-            break
-
-        terms += 1
-
-    return terms
