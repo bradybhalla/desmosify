@@ -89,26 +89,70 @@ def cluster_image(im, n_clusters, position_weight=0.0, mask=None):
     return clustered_img, colors, preds
 
 
-def get_fs_for_mask(mask, min_outline_pixels = 2):
-    assert min_outline_pixels >= 2
+def get_closest(pairs):
+    """
+    pairs is (index, color)
 
-    # flip because y-axis is flipped in Desmos
-    flipped = cv.flip(mask.astype(np.uint8), 0)
-    contours, _ = cv.findContours(flipped, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-    fourier_series = []
-    for pixels in contours:
+    TODO: there are more efficient functions if needed
+    """
+    pair_indices = (None, None)
+    color_indices = (None, None)
+    dist = float("inf")
+    for i in range(len(pairs)):
+        for j in range(i):
+            new_dist = np.linalg.norm(pairs[i][1] - pairs[j][1])
+            if new_dist < dist:
+                pair_indices = (i, j)
+                color_indices = (pairs[i][0], pairs[j][0])
+                dist = new_dist
 
-        # ignore regions that are too small
-        if pixels.shape[0] < min_outline_pixels:
+    return pair_indices, color_indices, dist
+
+
+def combine_similar_clusters(clustered_im, colors, max_dist_to_combine=20 / 255):
+    clustered_im = clustered_im.copy()
+    colors = colors.copy()
+
+    cluster_sizes = np.array([(clustered_im == i).sum() for i in range(len(colors))])
+    remaining_color_pairs = [(i, c) for i, c in enumerate(colors)]
+
+    while True:
+        (pair_i, pair_j), (color_i, color_j), dist = get_closest(remaining_color_pairs)
+        if pair_i is None or pair_j is None or color_i is None or color_j is None:
+            break
+
+        if dist > max_dist_to_combine:
+            break
+
+        # make sure j is larger
+        if pair_i > pair_j:
+            pair_i, pair_j = pair_j, pair_i
+            color_i, color_j = color_j, color_i
+
+        del remaining_color_pairs[pair_j]
+
+        if cluster_sizes[color_i] + cluster_sizes[color_j] > 0:
+            colors[color_i] = (
+                colors[color_i] * cluster_sizes[color_i]
+                + colors[color_j] * cluster_sizes[color_j]
+            ) / (cluster_sizes[color_i] + cluster_sizes[color_j])
+
+        cluster_sizes[color_i] = cluster_sizes[color_i] + cluster_sizes[color_j]
+        cluster_sizes[color_j] = 0
+
+        clustered_im[clustered_im == color_j] = color_i
+
+    new_clusters = np.zeros_like(clustered_im)
+    new_colors = []
+    next_color = 0
+    for color_ind, c in remaining_color_pairs:
+        if cluster_sizes[color_ind] == 0:
             continue
+        new_clusters[clustered_im == color_ind] = next_color
+        next_color += 1
+        new_colors.append(c)
 
-        X = pixels[:, 0, 0]
-        Y = pixels[:, 0, 1]
-
-        fs = points_to_fs(X, Y)
-        fourier_series.append(fs)
-
-    return fourier_series
+    return new_clusters, np.array(new_colors)
 
 
 if __name__ == "__main__":
@@ -120,38 +164,68 @@ if __name__ == "__main__":
     new_width = 512
     new_height = 512
     im = cv.resize(im, (new_width, new_height))
+    # im = cv.bilateralFilter(im, 5, 5, 5)
+    show(im)
 
-    pyramid = laplacian_pyramid(im, levels=9)
-    low_detail, high_detail = partial_collapse(pyramid, high_detail_levels=0)
+    # find initial clustering
+    clustered_im, colors, _ = cluster_image(im, 300, position_weight=1)
+    print(f"done clustering ({len(colors)} clusters)", file=sys.stderr)
+    show(colors[clustered_im])
 
+    # combine clusters with similar color
+    clustered_im, colors = combine_similar_clusters(clustered_im, colors)
+    print(f"done combining clusters ({len(colors)} unique colors)", file=sys.stderr)
+    show(colors[clustered_im])
 
-    mask = np.zeros(high_detail.shape[:2])
-    mask[(high_detail**2).sum(axis=2) > 0.04] = 1
+    total_removed_area = 0
 
+    all_fourier_series_eqns = []
+    for i, c in enumerate(colors):
+        r, g, b = (c * 255).astype(np.uint8)
+        color_str = f"rgb({r},{g},{b})"
 
-    clustered_im, ld_colors, _ = cluster_image(low_detail, 200, position_weight=2)
-    h = ld_colors[clustered_im]
-    h[mask == 1,:] = 1
-    show(h)
+        mask = cv.flip((clustered_im == i).astype(np.uint8), 0)
 
+        contours, _ = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
 
-    js_equation_objects = []
-    for i, c in enumerate(ld_colors):
-        fourier_series = get_fs_for_mask(clustered_im == i)
-        for fs in fourier_series:
-            r, g, b = (c * 255).astype(int)
+        for pixels in contours:
+
+            area = cv.contourArea(pixels)
+
+            # ignore regions that are too small
+            if area < 10:
+                total_removed_area += area
+                continue
+
+            if pixels.shape[0] <= 2:
+                total_removed_area += area
+                continue
+
+            X = pixels[:, 0, 0]
+            Y = pixels[:, 0, 1]
+
+            fs = points_to_fs(X, Y)
             equation_object = {
-                "latex": fs_to_desmos(*fs),
-                "color": f"rgb({r},{g},{b})",
+                "latex": fs_to_desmos(*fs, max_terms=50),
+                "color": color_str,
                 "lines": True,
                 "fill": True,
                 "fillOpacity": 1,
+                "lineWidth": 4,
             }
-            js_equation_objects.append(json.dumps(equation_object))
+            all_fourier_series_eqns.append((area, json.dumps(equation_object)))
 
-    js_equation_objects.insert(0, json.dumps({"latex":"N=\\left[0...30\\right]"}))
-    print(f"Calc.setExpressions([{','.join(js_equation_objects)}])")
-    print(f"num equations: {len(js_equation_objects)}", file=sys.stderr)
+
+    print("done calculating equations", file=sys.stderr)
+    print(f"missing area: {total_removed_area/512/512*100:.2f}%", file=sys.stderr)
+
+
+    all_fourier_series_eqns.sort(key=lambda x: x[0], reverse=True)
+
+    all_equations = [json.dumps({"latex": "N = \\left[0...30\\right]"})]
+    all_equations += [i[1] for i in all_fourier_series_eqns]
+    print(f"Calc.setExpressions([{','.join(all_equations)}])")
+    print(f"num equations: {len(all_equations)}", file=sys.stderr)
 
     # show(ld_colors[clustered_im])
 
