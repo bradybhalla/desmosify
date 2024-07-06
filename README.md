@@ -1,29 +1,20 @@
 # desmosify
-This project turns an image into a graph in [Desmos](https://desmos.com/calculator) using the following steps:
-
- - Perform k-means clustering on the pixels of the image (using both location and color) to split the image into sections.
- - Turn these clusters into a set of outlines, and turn the outlines into a graph of nodes.
- - Find long cycles formed from outline nodes.
- - Use Fourier Series to turn each outline into a parametric equation which Desmos can draw.
-
-### Example
+Convert an image into a [Desmos](https://desmos.com/calculator) graph!
 
 <img src="images/example.png" alt="Before" width="200"/>
 <img src="images/result.png" alt="After" width="200"/>
 
 ### Usage
-    python3 to_desmos.py <image path> [<clusters> <color weight> <blur level>]
- - `<image path>`: path to the image to convert
- - `<clusters>` *(optional, default=120)*: the number of clusters to use for k-means clustering
- - `<color weight>` *(optional, default=2.0)*: how much to consider colors (as opposed to location) of pixels during clustering
- - `<blur level>` *(optional, default=5)*: how much to blur the original image
+For a conversion with preset values, use `python3 desmosify.py <image path>`. For more information, run `python3 desmosify.py --help`.
 
-The output of this program will be stored in *out.txt*.  Copy and paste this file into the JavaScript console on [Desmos](https://desmos.com/calculator) and drag the *a* slider to its maximum value.
+The this program will print JavaScript to stdout. Copy and paste this output into the JavaScript console in [Desmos](https://desmos.com/calculator) and zoom out to see the image. Note that the output is very large so it might be a good idea to save to a file before copying (or pipe to `pbcopy`).
 
-*Note: If the image is too large, this program will take too long.*
+### Requirements
+These are the versions which worked for me. It is likely but not guaranteed that other versions of Python/packages will also work.
+- Python 3.10.14
+- numpy==1.26.4
+- matplotlib==3.8.4
+- scipy==1.13.0
+- opencv-python==4.10.0.82
+- scikit-learn==1.5.0
 
-### Libraries needed
- - numpy
- - matplotlib
- - scipy
- - OpenCV

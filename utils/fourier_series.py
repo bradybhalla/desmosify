@@ -49,9 +49,9 @@ def fourier_series_1d(x):
     N = x.shape[0]
     f = np.fft.fft(x) / N
 
-    coeffs = 2*f[:(N+1)//2]
+    coeffs = 2 * f[: (N + 1) // 2]
     coeffs[0] /= 2
-    return np.real(coeffs), np.imag(coeffs)
+    return np.real(coeffs), -np.imag(coeffs)
 
 
 def points_to_fs(X, Y):
@@ -68,8 +68,8 @@ def points_to_fs(X, Y):
     """
     f = get_interpolator(X, Y)
 
-    eps = 0.001
-    fx = f(np.linspace(eps, 1-eps, 2048))
+    eps = 1e-6
+    fx = f(np.linspace(eps, 1 - eps, 2048))
     ax, bx = fourier_series_1d(fx[:, 0])
     ay, by = fourier_series_1d(fx[:, 1])
     return ax, bx, ay, by
@@ -78,8 +78,7 @@ def points_to_fs(X, Y):
 def fs_to_desmos(ax, bx, ay, by, max_terms=30):
     """
     Create a Desmos equation which traces a Fourier series approximation
-    of the given points. In order for this to work, also define
-    `N=[0...max_terms]`.
+    of the given points.
 
     Arguments:
         - ax, bx: fourier series coeffs of X coordinate
@@ -87,7 +86,7 @@ def fs_to_desmos(ax, bx, ay, by, max_terms=30):
         - max_terms: the number of terms to put in the equation
 
     Returns:
-        - a string which can be pasted into Desmos
+        - a latex string which can be pasted into Desmos
     """
     As_x = [rf"{ax[i]:.6f}" for i in range(max_terms)]
     Bs_x = [rf"{bx[i]:.6f}" for i in range(max_terms)]
@@ -127,12 +126,41 @@ def fs_to_func(ax, bx, ay, by, terms=30):
     return f
 
 
+def terms_needed_for_err(fs, X, Y, *, mean_err_threshold, max_terms):
+    """
+    Find the number of terms needed in a fourier series for the average error
+    to be `mean_err_threshold`. If this is larger than `max_terms`, it will
+    return `max_terms` instead.
+    """
+    f = get_interpolator(X, Y)
+    eps = 1e-6
+    fx = f(np.linspace(eps, 1 - eps, 500))
+
+    terms = 1
+    while terms < max_terms:
+        eq = fs_to_func(*fs, terms=terms)
+        eqx = eq(np.linspace(eps, 1 - eps, 500))
+
+        err = np.linalg.norm(fx - eqx, axis=1)
+
+        if err.mean() < mean_err_threshold:
+            break
+
+        terms += 1
+
+    return terms
+
+
 # example
 if __name__ == "__main__":
     # X,Y are points of shape (it is a nice shape)
-    X = np.array( [ 204, 192, 174, 162, 154, 144, 120, 101, 104, 109, 110, 112, 113, 95, 74, 74, 75, 75, 114, 115, 114, 113, 114, 114, 132, 157, 170, 226, 268, 311, 333, 342, 345, 346, 346, 312, 305, 360, 389, 358, 334, 309, 301, 301, 312, 328, 338, 342, 343, 343, 343, 342, 336, 336, 332, 327, 319, 304, 280, 275, 273, 257, 235, 218, 203, 202])
+    X = np.array(
+        [ 204, 192, 174, 162, 154, 144, 120, 101, 104, 109, 110, 112, 113, 95, 74, 74, 75, 75, 114, 115, 114, 113, 114, 114, 132, 157, 170, 226, 268, 311, 333, 342, 345, 346, 346, 312, 305, 360, 389, 358, 334, 309, 301, 301, 312, 328, 338, 342, 343, 343, 343, 342, 336, 336, 332, 327, 319, 304, 280, 275, 273, 257, 235, 218, 203, 202, ]
+    )
 
-    Y = np.array( [ 330, 327, 337, 368, 404, 425, 429, 405, 354, 321, 283, 245, 232, 230, 227, 227, 169, 157, 155, 189, 233, 205, 162, 152, 97, 70, 63, 46, 44, 57, 77, 98, 115, 127, 127, 133, 173, 187, 148, 131, 127, 129, 148, 166, 180, 183, 185, 186, 186, 204, 235, 248, 311, 319, 368, 398, 420, 437, 423, 396, 372, 349, 336, 331, 330, 329])
+    Y = np.array(
+        [ 330, 327, 337, 368, 404, 425, 429, 405, 354, 321, 283, 245, 232, 230, 227, 227, 169, 157, 155, 189, 233, 205, 162, 152, 97, 70, 63, 46, 44, 57, 77, 98, 115, 127, 127, 133, 173, 187, 148, 131, 127, 129, 148, 166, 180, 183, 185, 186, 186, 204, 235, 248, 311, 319, 368, 398, 420, 437, 423, 396, 372, 349, 336, 331, 330, 329, ]
+    )
 
     Y = -np.array(Y)
 
@@ -146,7 +174,7 @@ if __name__ == "__main__":
 
     # get Fourier series function
     fs = fs_to_func(ax, bx, ay, by)
-    t = np.linspace(0,1,300)
+    t = np.linspace(0, 1, 300)
 
     plt.plot(*fs(t).T)
     plt.show()

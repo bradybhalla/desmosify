@@ -1,7 +1,5 @@
 images/*
 !images/example.png
 !images/result.png
-zz_old*
-out.txt
 .DS_Store
 __pycache__/
