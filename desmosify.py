@@ -59,7 +59,7 @@ if __name__ == "__main__":
         "--verbose",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Print progress messages",
+        help="Print progress messages to stderr",
     )
 
     args = parser.parse_args()
